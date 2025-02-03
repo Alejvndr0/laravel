@@ -1,8 +1,9 @@
-# Usa la imagen oficial de PHP con extensiones necesarias
+# Usa la imagen oficial de Nginx con PHP-FPM
 FROM php:8.2-fpm
 
-# Instala dependencias del sistema
+# Instala dependencias necesarias
 RUN apt-get update && apt-get install -y \
+    nginx \
     curl \
     zip \
     unzip \
@@ -17,10 +18,8 @@ RUN apt-get update && apt-get install -y \
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Crear directorio de la aplicación
+# Copiar archivos del proyecto
 WORKDIR /var/www/html
-
-# Copiar archivos del proyecto al contenedor
 COPY . .
 
 # Instalar dependencias de Laravel
@@ -29,8 +28,11 @@ RUN composer install --no-dev --optimize-autoloader
 # Establecer permisos correctos
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Exponer el puerto 9000 (por defecto para PHP-FPM)
-EXPOSE 9000
+# Configurar Nginx
+COPY ./nginx/default.conf /etc/nginx/sites-available/default
 
-# Comando para iniciar PHP-FPM
-CMD ["php-fpm"]
+# Exponer puertos
+EXPOSE 80
+
+# Comando para ejecutar Nginx y PHP-FPM juntos
+CMD service nginx start && php-fpm
